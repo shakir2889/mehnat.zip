@@ -1,0 +1,1 @@
+{ "expo": { "name": "Mehnat", "slug": "mehnat", "version": "0.1.0", "orientation": "portrait", "android": { "package": "com.mehnat.app" }, "ios": { "bundleIdentifier": "com.mehnat.app" } } }

@@ -1,0 +1,1 @@
+Needed credentials: PostgreSQL host, domain+HTTPS, Firebase (FCM), SMS/OTP provider, object storage, Google Maps/OSRM for distance, payment provider merchant accounts (Qatar & Pakistan), Apple Developer ($99/yr) + Google Play ($25) accounts.
