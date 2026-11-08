@@ -1,1 +1,1 @@
-{ "name": "mehnat", "private": true, "workspaces": ["backend", "mobile"] }
+{ "name": "mehnat", "private": true }
