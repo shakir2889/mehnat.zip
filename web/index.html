@@ -1,0 +1,103 @@
+<!doctype html><html lang="ur"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#4c1d95"><link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg">
+<title>Mehnat | محنت</title>
+<style>
+:root{--p:#4c1d95;--bg:#f5f3ff;--c:#fff;--t:#1f1535;--m:#6b6485;--b:#ddd6fe}
+@media(prefers-color-scheme:dark){:root{--bg:#14101f;--c:#201a33;--t:#f1edff;--m:#a79fc4;--b:#3a3057}}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--t);padding-bottom:env(safe-area-inset-bottom)}
+header{background:var(--p);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 16px 14px;display:flex;justify-content:space-between;align-items:center}
+header b{font-size:20px}main{padding:16px;max-width:520px;margin:auto}
+.card{background:var(--c);border:1px solid var(--b);border-radius:14px;padding:14px;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tile{border-radius:16px;padding:14px;min-height:96px;display:flex;align-items:flex-end;color:#fff;font-weight:700;font-size:16px;cursor:pointer;border:0;text-align:start}
+input,select{width:100%;padding:12px;margin:5px 0;border:1px solid var(--b);border-radius:10px;background:var(--c);color:var(--t);font-size:16px}
+button.b{width:100%;background:var(--p);color:#fff;border:0;padding:13px;border-radius:12px;font-weight:700;font-size:16px;margin:6px 0}
+button.s{background:none;border:1px solid var(--b);color:var(--t);padding:8px 12px;border-radius:10px}
+h2{margin:6px 0 10px;font-size:18px}.m{color:var(--m);font-size:14px}.row{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--b)}
+.tag{padding:2px 8px;border-radius:99px;font-size:12px;background:var(--b)}#toast{position:fixed;bottom:20px;left:16px;right:16px;background:#111;color:#fff;padding:12px;border-radius:12px;display:none;text-align:center}
+</style></head><body>
+<header><b>Mehnat | محنت</b><span id="nav"></span></header>
+<main id="app"></main><div id="toast"></div>
+<script>
+const API='https://mehnat-api.onrender.com/api/v1'; // change if your API address changes
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let S=(()=>{try{return JSON.parse(localStorage.getItem('mh')||'null')}catch{return null}})();
+const save=v=>{S=v;try{v?localStorage.setItem('mh',JSON.stringify(v)):localStorage.removeItem('mh')}catch{}};
+const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3500)};
+async function api(path,method='GET',body,retry=true){
+  const r=await fetch(API+path,{method,headers:{'Content-Type':'application/json',...(S?{Authorization:'Bearer '+S.accessToken}:{})},body:body?JSON.stringify(body):undefined});
+  if(r.status===401&&S&&retry&&S.refreshToken){
+    const rr=await fetch(API+'/auth/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refreshToken:S.refreshToken})});
+    if(rr.ok){const j=await rr.json();save({...S,...j});return api(path,method,body,false)} save(null);go('login');throw new Error('Session expired');
+  }
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(typeof j.error==='string'?j.error:JSON.stringify(j.error||j));return j;
+}
+const go=v=>{location.hash=v;render()};
+const LAB=['general_labour','mason','tile_mason','plumber','electrician','painter','carpenter','cleaner','plaster_worker','construction_worker'];
+const TRK=['3_ton','5_ton','7_ton','large','pickup','trailer','jcb','excavator','crane'];
+const opts=a=>a.map(x=>`<option>${x}</option>`).join('');
+const back=`<button class="s" onclick="go('home')">← Home</button>`;
+async function render(){
+  const v=(location.hash||'#home').slice(1);
+  $('#nav').innerHTML=S?`<button class="s" style="color:#fff;border-color:#fff8" onclick="save(null);go('login')">Logout</button>`:'';
+  if(!S&&v!=='login')return go('login');
+  try{await ({login,home,billing,khata,services}[v]||home)()}catch(e){toast(e.message)}
+}
+function login(){
+  $('#app').innerHTML=`<div class="card"><h2>Login / رجسٹر</h2>
+  <input id="ph" placeholder="Phone +974… / +92…" type="tel"><input id="pw" type="password" placeholder="Password (min 8)">
+  <div id="reg" style="display:none"><input id="nm" placeholder="Name / نام"><select id="co"><option value="QA">Qatar</option><option value="PK">Pakistan</option></select>
+  <select id="ro"><option value="customer">Customer</option><option value="business_owner">Business owner</option><option value="worker">Worker</option><option value="driver">Driver</option></select></div>
+  <button class="b" id="bl">Login</button><button class="b" style="background:#7c3aed" id="br">Register / نیا اکاؤنٹ</button>
+  <p class="m">Server may take ~50 s to wake up the first time.</p></div>`;
+  $('#bl').onclick=async()=>{try{const j=await api('/auth/login','POST',{phone:$('#ph').value.trim(),password:$('#pw').value});save(j);go('home')}catch(e){toast(e.message)}};
+  $('#br').onclick=async()=>{const r=$('#reg');if(r.style.display==='none'){r.style.display='block';return}
+    try{const j=await api('/auth/register','POST',{phone:$('#ph').value.trim(),password:$('#pw').value,name:$('#nm').value,country:$('#co').value,role:$('#ro').value});save(j);go('home')}catch(e){toast(e.message)}};
+}
+function home(){
+  const T=[['billing','Online Billing<br>آن لائن بل','#2563eb'],['khata','Digital Khata<br>ڈیجیٹل کھاتہ','#16a34a'],['services','Find Labour<br>مزدور','#ea580c'],['services','Book Transport<br>ٹرانسپورٹ','#6d28d9']];
+  $('#app').innerHTML=`<p class="m">Hello ${esc(S.user?.name)}</p><div class="grid">${T.map(t=>`<button class="tile" style="background:${t[2]}" onclick="go('${t[0]}')">${t[1]}</button>`).join('')}</div>`;
+}
+let BIZ=null;
+async function getBiz(){const b=await api('/businesses');BIZ=b[0]||null;return BIZ}
+async function billing(){
+  await getBiz();
+  if(!BIZ){$('#app').innerHTML=`${back}<div class="card"><h2>Create your business</h2><input id="bn" placeholder="Business name"><select id="bc"><option value="QA">Qatar (QAR)</option><option value="PK">Pakistan (PKR)</option></select><button class="b" id="bb">Create</button></div>`;
+    $('#bb').onclick=async()=>{try{await api('/businesses','POST',{name:$('#bn').value,country:$('#bc').value});billing()}catch(e){toast(e.message)}};return}
+  const inv=await api('/invoices?businessId='+BIZ.id);
+  $('#app').innerHTML=`${back}<div class="card"><h2>${esc(BIZ.name)} · New bill</h2>
+  <input id="cn" placeholder="Customer name"><input id="cp" placeholder="Customer phone" type="tel"><input id="ds" placeholder="Description"><input id="am" placeholder="Amount (${BIZ.currency})" type="number" inputmode="decimal">
+  <button class="b" id="mk">Create & get link</button><div id="out"></div></div>
+  <div class="card"><h2>Invoices</h2>${inv.map(i=>`<div class="row"><span>${esc(i.number)}</span><span>${i.currency} ${esc(i.total)}</span><span class="tag">${esc(i.status)}</span></div>`).join('')||'<p class="m">None yet</p>'}</div>`;
+  $('#mk').onclick=async()=>{try{
+    const name=$('#cn').value.trim(),amt=Number($('#am').value);if(!name||!(amt>0))return toast('Enter name and amount');
+    const acc=await api(`/businesses/${BIZ.id}/accounts`);let a=acc.find(x=>x.name===name);
+    if(!a)a=await api(`/businesses/${BIZ.id}/accounts`,'POST',{name,phone:$('#cp').value.trim()||undefined});
+    const i=await api('/invoices','POST',{businessId:BIZ.id,accountId:a.id,description:$('#ds').value||undefined,items:[{description:$('#ds').value||'Service',quantity:1,unitPrice:amt}]});
+    const link=i.shareUrl,msg=`Bill ${i.number}: ${i.currency} ${i.total}\n${link}`;
+    $('#out').innerHTML=`<p class="m">Link:</p><input readonly value="${esc(link)}"><button class="b" onclick="navigator.clipboard.writeText('${esc(link)}').then(()=>toast('Copied'))">Copy link</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener"><button class="b" style="background:#16a34a">Share on WhatsApp</button></a>`;
+  }catch(e){toast(e.message)}};
+}
+async function khata(){
+  await getBiz();if(!BIZ){$('#app').innerHTML=`${back}<div class="card">Create a business in Billing first.</div>`;return}
+  const acc=await api(`/businesses/${BIZ.id}/accounts`);
+  const bal=await Promise.all(acc.map(a=>api('/invoices/ledger/'+a.id).then(r=>r.balance).catch(()=>'?')));
+  $('#app').innerHTML=`${back}<div class="card"><h2>Khata</h2>${acc.map((a,i)=>`<div class="row"><span>${esc(a.name)}</span><b>${BIZ.currency} ${esc(bal[i])}</b></div>`).join('')||'<p class="m">No accounts</p>'}</div>
+  <div class="card"><h2>New entry</h2><select id="ka">${acc.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('')}</select>
+  <select id="kd"><option value="debit">Debit (customer owes) / ادھار</option><option value="credit">Credit (payment received) / وصولی</option></select>
+  <input id="kn" placeholder="Note"><input id="ka2" placeholder="Amount" type="number" inputmode="decimal"><button class="b" id="ke">Save entry</button></div>`;
+  $('#ke').onclick=async()=>{try{await api('/khata/entries','POST',{accountId:$('#ka').value,direction:$('#kd').value,amount:Number($('#ka2').value),note:$('#kn').value||undefined});khata()}catch(e){toast(e.message)}};
+}
+function services(){
+  $('#app').innerHTML=`${back}<div class="card"><h2>Book labour / transport</h2><select id="sk"><option value="labour">Labour</option><option value="truck">Truck / transport</option></select>
+  <select id="sc">${opts(LAB)}</select><button class="b" id="sb">Use my location & book</button><p class="m" id="sm"></p></div>`;
+  $('#sk').onchange=()=>$('#sc').innerHTML=opts($('#sk').value==='labour'?LAB:TRK);
+  $('#sb').onclick=()=>{if(!navigator.geolocation)return toast('Location not supported');
+    navigator.geolocation.getCurrentPosition(async p=>{try{const r=await api('/bookings','POST',{kind:$('#sk').value,category:$('#sc').value,pickupLat:p.coords.latitude,pickupLng:p.coords.longitude});
+      $('#sm').textContent=`Notified ${r.notified} providers within ${r.radiusKm} km`}catch(e){toast(e.message)}},()=>toast('Location permission needed'),{enableHighAccuracy:true,timeout:15000})};
+}
+addEventListener('hashchange',render);render();
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
